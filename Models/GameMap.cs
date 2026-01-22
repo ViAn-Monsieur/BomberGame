@@ -5,115 +5,86 @@ using Newtonsoft.Json;
 
 namespace BomberServer.Models
 {
-    /*
-     TILE CODE:
-     0 = Empty
-     1 = Hard Wall
-     2 = Soft Wall
-     3 = Spawn
-    */
-    internal class GameMap
+    public enum TileType
+    {
+        Empty = 0,
+        Wall = 1, //tuong cung khong pha duoc
+        Brick = 2, //gach co the pha duoc
+        SpawnPoint = 3 //diem spawn
+    }
+
+    public class GameMap
     {
         public int Width { get; private set; }
         public int Height { get; private set; }
-        public int[,] Tiles { get; private set; }
 
-        public List<(int x, int y)> SpawnPoints { get; private set; } = new();
+        //tile[y,x]
+        public TileType[,] Tiles { get; private set; } = default!;
 
-        public static GameMap Load(string path)
+        public GameMap(int width, int height)
         {
-            string fullPath = Path.Combine(AppContext.BaseDirectory, path);
-            if (!File.Exists(fullPath))
-                throw new Exception("Map file not found: " + fullPath);
-
-            string json = File.ReadAllText(fullPath);
-            dynamic data = JsonConvert.DeserializeObject(json);
-
-            GameMap map = new GameMap
-            {
-                Width = data.width,
-                Height = data.height,
-                Tiles = new int[(int)data.height, (int)data.width]
-            };
-
-            for (int y = 0; y < map.Height; y++)
-            {
-                for (int x = 0; x < map.Width; x++)
-                {
-                    int tile = data.tiles[y][x];
-                    map.Tiles[y, x] = tile;
-
-                    if (tile == 3)
-                        map.SpawnPoints.Add((x, y));
-                }
-            }
-
-            Console.WriteLine($"Map loaded: {map.Width}x{map.Height}");
-            Console.WriteLine($"Spawn points: {map.SpawnPoints.Count}");
-
-            return map;
+            Width = width;
+            Height = height;
+            Tiles = new TileType[height, width];
         }
-
+        //ben trong map
         public bool IsInside(int x, int y)
-            => x >= 0 && y >= 0 && x < Width && y < Height;
+        {
+            return x >= 0 && x < Width && y >= 0 && y < Height;
+        }
 
+        public TileType GetTile(int x, int y)
+        {
+            if (!IsInside(x, y)) return TileType.Wall;
+            return Tiles[y, x];
+        }
+        public void SetTile(int x, int y, TileType type)
+        {
+            if (!IsInside(x, y)) return;
+            Tiles[y, x] = type;
+        }
+        //co the di
         public bool IsWalkable(int x, int y)
-            => IsInside(x, y) && (Tiles[y, x] == 0 || Tiles[y, x] == 3);
-
-        public bool IsHardWall(int x, int y)
-            => IsInside(x, y) && Tiles[y, x] == 1;
-
-        public bool IsSoftWall(int x, int y)
-            => IsInside(x, y) && Tiles[y, x] == 2;
-
-        public void DestroySoftWall(int x, int y)
         {
-            if (IsSoftWall(x, y))
-                Tiles[y, x] = 0;
+            TileType tile = GetTile(x, y);
+            return tile == TileType.Empty || tile == TileType.SpawnPoint;
         }
-
-        public void Print()
+        //bi chan
+        public bool IsBlocked(int x, int y)
+        { 
+            TileType tile = GetTile(x, y);
+            return tile == TileType.Wall || tile == TileType.Brick;
+        }
+        //co the dat bomb
+        public bool CanPlaceBomb(int x, int y)
         {
-            for (int y = 0; y < Height; y++)
+            TileType tile = GetTile(x, y);
+            return tile == TileType.Empty || tile == TileType.SpawnPoint;
+        }
+        //pha brick
+        public bool DestroyBrick(int x, int y)
+        {
+            if (GetTile(x, y) == TileType.Brick)
             {
-                for (int x = 0; x < Width; x++)
-                {
-                    char c = Tiles[y, x] switch
-                    {
-                        0 => '.',
-                        1 => '#',
-                        2 => '*',
-                        3 => 'S',
-                        _ => '?'
-                    };
-                    Console.Write(c + " ");
-                }
-                Console.WriteLine();
+                SetTile(x, y, TileType.Empty);
+                return true;
             }
+            return false;
         }
-        public void PrintMap(Player player)
+        public List<(int x, int y)> FindSpawnPoint()
         {
+            var spawnPoints = new List<(int x, int y)>();
             for (int y = 0; y < Height; y++)
             {
-                for (int x = 0; x < Width; x++)
+                for(int x = 0; x < Width; x++)
                 {
-                    if (x == player.X && y == player.Y)
+                    if (GetTile(x, y) == TileType.SpawnPoint)
                     {
-                        Console.Write("P ");
-                        continue;
+                        spawnPoints.Add((x, y));
                     }
-                    char c = Tiles[y, x] switch
-                    {
-                        0 => '.',
-                        1 => '#',
-                        2 => '*',
-                        3 => '.',
-                        _ => '?'
-                    };
-                    Console.Write(c + " ");
                 }
-                Console.WriteLine();
             }
+            return spawnPoints;
         }
     }
 }

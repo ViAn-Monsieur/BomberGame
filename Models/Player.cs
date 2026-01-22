@@ -2,63 +2,91 @@
 
 namespace BomberServer.Models
 {
-    internal class Player
+    [Flags]
+    public enum PlayerInput
+    {
+        None = 0,
+        Up = 1 << 0,
+        Down = 1 << 1,
+        Left = 1 << 2,
+        Right = 1 << 3,
+        PlaceBomb = 1 << 4
+    }
+
+    public class Player
     {
         public int Id { get; }
+        public string nickName { get; set; } = "";
+
+        //toa do
         public int X { get; private set; }
         public int Y { get; private set; }
 
-        public bool IsAlive { get; private set; } = true;
+        //trang thai nguoi choi
+        public bool IsAlive { get; set; } = true;
 
-        public int MaxBombs { get; private set; } = 1;
-        public int BombRange { get; private set; } = 2;
+        //thong tin ve bomb
+        public int BombPower { get; set; } = 2;
+        public int MaxBombs { get; set; } = 1;
+        public int CurrentBombsPlaced { get; set; } = 0;
 
-        public int ActiveBombs { get; private set; } = 0;
+        //input state
+        public PlayerInput LastInput { get; private set; } = PlayerInput.None;
 
-        // ===== CONSTRUCTOR =====
-        public Player(int id, int startX, int startY)
+        public Player(int id, int x, int y, string nickname = "")
         {
             Id = id;
-            X = startX;
-            Y = startY;
+            X = x;
+            Y = y;
+            nickName = nickname;
         }
-
-        // ===== MOVE =====
-        public bool Move(int dx, int dy, GameMap map)
+        public void Respawn(int x, int y)
         {
-            if (!IsAlive) return false;
-
-            int nx = X + dx;
-            int ny = Y + dy;
-
-            if (!map.IsWalkable(nx, ny))
-                return false;
-
-            X = nx;
-            Y = ny;
-            return true;
+            X = x;
+            Y = y;
+            IsAlive = true;
+            CurrentBombsPlaced = 0;
+            LastInput = PlayerInput.None;
         }
-
-        // ===== PLACE BOMB =====
-        public bool CanPlaceBomb()
-        {
-            return IsAlive && ActiveBombs < MaxBombs;
-        }
-
-        public void OnBombPlaced()
-        {
-            ActiveBombs++;
-        }
-
-        public void OnBombExploded()
-        {
-            ActiveBombs = Math.Max(0, ActiveBombs - 1);
-        }
-
-        // ===== DAMAGE =====
         public void Kill()
         {
             IsAlive = false;
+            CurrentBombsPlaced = 0;
+            LastInput = PlayerInput.None;
         }
+        public void UpdateMove(GameMap gameMap, Func<int, int, bool> isBombAt)
+        {
+            if(!IsAlive)
+                return;
+            int dx = 0;
+            int dy = 0;
+
+            if (LastInput.HasFlag(PlayerInput.Up)) dy -= 1;
+            if (LastInput.HasFlag(PlayerInput.Down)) dy += 1;
+            if (LastInput.HasFlag(PlayerInput.Left)) dx -= 1;
+            if (LastInput.HasFlag(PlayerInput.Right)) dx += 1;
+
+            if(dx ==0 && dy == 0)
+                return;
+
+            int newX = X + dx;
+            int newY = Y + dy;
+
+            if (!gameMap.IsWalkable(newX, newY) || isBombAt(newX, newY))
+                return;
+
+            X = newX;
+            Y = newY;
+        }
+        //muon dat bomb
+        public bool WantsPlaceBomb()
+        {
+            return IsAlive && LastInput.HasFlag(PlayerInput.PlaceBomb) && CurrentBombsPlaced < MaxBombs;
+        }
+        public void SetInput(PlayerInput input)
+        {
+            LastInput = input;
+        }
+
     }
 }

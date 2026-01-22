@@ -7,7 +7,7 @@ namespace Networking
     {
         public int Id { get; }
         public TcpClient Tcp { get; }
-        public IPEndPoint UdpEndPoint { get; private set; }
+        public IPEndPoint? UdpEndPoint { get; private set; }
 
         public ClientSession(int id, TcpClient tcp)
         {
