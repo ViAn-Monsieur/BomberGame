@@ -18,6 +18,17 @@ namespace BomberServer.Core
             MatchId = matchId;
             Map = map;
         }
+
+        public (int x, int y) GetRandomSpawn()
+        {
+            var spawns = Map.FindSpawnPoint();
+
+            if (spawns.Count == 0)
+                throw new Exception("No spawn points!");
+
+            return spawns[Random.Shared.Next(spawns.Count)];
+        }
+
         //them player
         public void AddPlayer(Player player)
         {
@@ -81,9 +92,13 @@ namespace BomberServer.Core
                 if (Explosions[i].IsExpired)
                     Explosions.RemoveAt(i);
             }
-            Console.WriteLine($"Tick={Tick} P1=({Players[1].X},{Players[1].Y}) Input={Players[1].LastInput}");
-            Console.WriteLine($"Tick={Tick} P2=({Players[2].X},{Players[2].Y}) Input={Players[2].LastInput}");
-
+            //5.Console Player
+            foreach (var p in Players.Values)
+            {
+                Console.WriteLine(
+                    $"Tick={Tick} Player={p.Id} Pos=({p.X},{p.Y}) Input={p.LastInput}"
+                );
+            }
         }
 
         private void OnBombExplode(Bomb bomb)

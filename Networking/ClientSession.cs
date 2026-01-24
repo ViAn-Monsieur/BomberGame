@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using BomberServer.Models;
 
 namespace Networking
 {
@@ -8,6 +9,8 @@ namespace Networking
         public int Id { get; }
         public TcpClient Tcp { get; }
         public IPEndPoint? UdpEndPoint { get; private set; }
+
+        public Player? Player { get; set; }   // ⭐ THÊM
 
         public ClientSession(int id, TcpClient tcp)
         {

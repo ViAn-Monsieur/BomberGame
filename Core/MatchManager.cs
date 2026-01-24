@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BomberServer.Models;
+using System.Linq;
 
 namespace BomberServer.Core
 {
@@ -29,6 +30,16 @@ namespace BomberServer.Core
             if (_matches.Remove(matchId))
                 Console.WriteLine($"[MatchManager] Removed Match #{matchId}");
         }
+
+        //
+        public Match GetOrCreateMatch()
+        {
+            if (_matches.Count == 0)
+                throw new Exception("No match exists!");
+
+            return _matches.Values.First();
+        }
+        //
 
         public void Update(float dt)
         {
