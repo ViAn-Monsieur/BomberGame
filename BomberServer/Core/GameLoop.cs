@@ -6,15 +6,15 @@ namespace BomberServer.Core
 {
     public class GameLoop
     {
-        private readonly MatchManager _matchManager;
-        private bool _running = false;
+        private readonly RoomManager _roomManager;
+        private bool _running;
 
         public int TickRate { get; }
         public float DeltaTime => 1f / TickRate;
 
-        public GameLoop(MatchManager matchManager, int tickRate = 30)
+        public GameLoop(RoomManager roomManager, int tickRate = 30)
         {
-            _matchManager = matchManager;
+            _roomManager = roomManager;
             TickRate = tickRate;
         }
 
@@ -30,24 +30,30 @@ namespace BomberServer.Core
             while (_running)
             {
                 long now = sw.ElapsedMilliseconds;
-                long elapsed = now - last;
-
-                if (elapsed >= tickIntervalMs)
+                if (now - last >= tickIntervalMs)
                 {
                     last = now;
-                    _matchManager.Update(DeltaTime);
+                    Update(DeltaTime);
                 }
                 else
                 {
-                    // ngủ 1 tí để giảm CPU
                     Thread.Sleep(1);
                 }
             }
         }
 
-        public void Stop()
+        private void Update(float dt)
         {
-            _running = false;
+            foreach (var room in _roomManager.AllRooms)
+            {
+                if (room.State == RoomState.Playing)
+                {
+                    room.Update(dt);
+                    room.CheckWinCondition();
+                }
+            }
         }
+
+        public void Stop() => _running = false;
     }
 }

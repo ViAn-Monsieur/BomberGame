@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using BomberServer.Models;
 using Networking;
@@ -7,83 +8,66 @@ namespace BomberServer.Core
 {
     public class GameServer
     {
-        public MatchManager MatchManager { get; } = new();
-        public GameLoop Loop { get; private set; } = default!;
+        public RoomManager RoomManager { get; } = new();
+        public GameLoop GameLoop { get; private set; } = default!;
 
-        TcpServer? tcp;
-        UdpServer? udp;
-        
+        TcpServer tcp = default!;
+        UdpServer udp = default!;
+
         public void Start()
         {
             Console.WriteLine("[GameServer] Starting...");
 
-            // start network
             tcp = new TcpServer(7777, this);
             udp = new UdpServer(8888, this);
 
             tcp.Start();
             udp.Start();
 
-            // tạo match
-            var map = CreateTestMap();
-            MatchManager.CreateMatch(map);
-
-            // start loop
-            Loop = new GameLoop(MatchManager, tickRate: 10);
-            Loop.Start();
+            GameLoop = new GameLoop(RoomManager, tickRate: 10);
+            GameLoop.Start();
         }
 
-        // ⭐ ĐƯỢC GỌI KHI CLIENT TCP CONNECT
         public void OnClientConnected(ClientSession session)
         {
-            var match = MatchManager.GetOrCreateMatch();
+            Console.WriteLine($"Client {session.Id} connected");
 
-            var spawn = match.GetRandomSpawn();
-            var player = new Player(
-                session.Id,
-                spawn.x,
-                spawn.y,
-                $"P{session.Id}"
-            );
+            // var map = LoadRandomMap();
+            // var room = RoomManager.JoinRandomRoom(RoomType.Solo2, map);
+
+            var room = RoomManager.JoinRandomRoom(RoomType.Solo2, LoadRandomMap);
+
+            var spawn = room.GetRandomSpawn();
+            var player = new Player(session.Id, spawn.x, spawn.y, $"P{session.Id}");
 
             session.Player = player;
-            match.AddPlayer(player);
+            session.Player.RoomId = room.RoomId;
 
-            Console.WriteLine($"Player {player.nickName} joined match");
+            RoomManager.AddPlayerToRoom(room, player);
         }
 
+        public void OnClientDisconnected(ClientSession session)
+        {
+            if (session.Player != null)
+            {
+                RoomManager.LeaveRoom(session.Player);
+            }
+        }
 
         public void OnUdpPacket(IPEndPoint ep, byte[] data)
         {
             PacketDispatcher.Dispatch(ep, data);
         }
 
-        private GameMap CreateTestMap()
+        private GameMap LoadRandomMap()
         {
-            var map = new GameMap(9, 7);
-            for (int y = 0; y < map.Height; y++)
-                for (int x = 0; x < map.Width; x++)
-                    map.SetTile(x, y, TileType.Empty);
+            var files = Directory.GetFiles("Maps", "*.json");
+            if (files.Length == 0)
+                throw new Exception("No map files");
 
-            for (int x = 0; x < map.Width; x++)
-            {
-                map.SetTile(x, 0, TileType.Wall);
-                map.SetTile(x, map.Height - 1, TileType.Wall);
-            }
-            for (int y = 0; y < map.Height; y++)
-            {
-                map.SetTile(0, y, TileType.Wall);
-                map.SetTile(map.Width - 1, y, TileType.Wall);
-            }
-
-            map.SetTile(3, 3, TileType.Brick);
-            map.SetTile(4, 3, TileType.Brick);
-            map.SetTile(5, 3, TileType.Brick);
-
-            map.SetTile(1, 1, TileType.SpawnPoint);
-            map.SetTile(7, 5, TileType.SpawnPoint);
-
-            return map;
+            return GameMapLoader.LoadFromJson(
+                files[Random.Shared.Next(files.Length)]
+            );
         }
     }
 }

@@ -17,6 +17,9 @@ namespace BomberServer.Models
     {
         public int Id { get; }
         public string nickName { get; set; } = "";
+            
+        public int RoomId { get; set; }
+        public int TeamId { get; set; } = 0; // 0 = solo
 
         //toa do
         public int X { get; private set; }
