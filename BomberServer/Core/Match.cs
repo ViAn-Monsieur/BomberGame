@@ -93,12 +93,12 @@ namespace BomberServer.Core
                     Explosions.RemoveAt(i);
             }
             //5.Console Player
-            foreach (var p in Players.Values)
-            {
-                Console.WriteLine(
-                    $"Tick={Tick} Player={p.Id} Pos=({p.X},{p.Y}) Input={p.LastInput}"
-                );
-            }
+            // foreach (var p in Players.Values)
+            // {
+            //     Console.WriteLine(
+            //         $"Tick={Tick} Player={p.Id} Pos=({p.X},{p.Y}) Input={p.LastInput}"
+            //     );
+            // }
         }
 
         private void OnBombExplode(Bomb bomb)

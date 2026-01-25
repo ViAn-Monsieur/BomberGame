@@ -344,6 +344,10 @@
 "Assets/Networking/NetworkClient.cs"
 "Assets/Networking/TcpClientNet.cs"
 "Assets/Networking/UdpClientNet.cs"
+"Assets/Scripts/AnimatedSpriteRenderer.cs"
+"Assets/Scripts/BombController.cs"
+"Assets/Scripts/Explosion.cs"
+"Assets/Scripts/PlayerController.cs"
 -langversion:8.0
 
 /deterministic
