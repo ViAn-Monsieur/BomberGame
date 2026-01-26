@@ -24,7 +24,7 @@ namespace BomberServer.Models
         { 
             bricksDestroyed = new List<(int x, int y)>();
 
-            var cells = new List<(int x, int y)> { (centerX, centerY) };
+            var cells = new HashSet<(int x, int y)> { (centerX, centerY) };
 
             //no theo bon huong
             var dirs = new (int dx, int dy)[]
@@ -63,7 +63,7 @@ namespace BomberServer.Models
                     }
                 }
             }
-            return new Explosion(cells);
+            return new Explosion(cells.ToList());
         }
     }
 }

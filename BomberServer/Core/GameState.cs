@@ -1,22 +1,28 @@
+using BomberServer.Models;
 using System.Collections.Generic;
 
 namespace BomberServer.Core
 {
     public class GameState
     {
+        public int RoomId { get; set; }
         public int MatchId { get; set; }
         public int Tick { get; set; }
-
+        public GameMap Map { get; set; }
         public List<PlayerState> Players { get; set; } = new();
         public List<BombState> Bombs { get; set; } = new();
         public List<ExplosionCellState> Explosions { get; set; } = new();
+
     }
 
     public class PlayerState
     {
         public int Id { get; set; }
+        public string NickName { get; set; } = "";
+
         public int X { get; set; }
         public int Y { get; set; }
+
         public bool Alive { get; set; }
     }
 
@@ -25,7 +31,8 @@ namespace BomberServer.Core
         public int OwnerId { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
-        public float RemainingTime { get; set; }
+
+        public float Timer { get; set; }
         public int Power { get; set; }
     }
 

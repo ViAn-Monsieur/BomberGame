@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using BomberServer.Models;
 
 namespace Networking
@@ -8,9 +9,8 @@ namespace Networking
     {
         public int Id { get; }
         public TcpClient Tcp { get; }
-        public IPEndPoint? UdpEndPoint { get; private set; }
 
-        public Player? Player { get; set; }   // ⭐ THÊM
+        public Player? Player { get; set; }
 
         public ClientSession(int id, TcpClient tcp)
         {
@@ -20,11 +20,21 @@ namespace Networking
 
         public void BindUdp(IPEndPoint ep)
         {
-            if (UdpEndPoint == null)
+            if (Player == null)
+                return;
+
+            if (Player.RemoteEndPoint == null)
             {
-                UdpEndPoint = ep;
+                Player.RemoteEndPoint = ep;
                 Console.WriteLine($"Client {Id} bind UDP {ep}");
             }
+        }
+
+        public void Send(string msg)
+        {
+            var stream = Tcp.GetStream();
+            byte[] data = Encoding.UTF8.GetBytes(msg + "\n");
+            stream.Write(data, 0, data.Length);
         }
     }
 }

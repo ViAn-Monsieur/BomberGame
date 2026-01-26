@@ -1,43 +1,26 @@
 using System.Net;
+using System.Text;
 
 namespace Networking
 {
     public static class PacketDispatcher
     {
-        // packetId = data[0]
         public static void Dispatch(IPEndPoint ep, byte[] data)
         {
-            byte packetId = data[0];
+            string msg = Encoding.UTF8.GetString(data);
 
-            switch (packetId)
+            // UDP bind
+            if (msg.StartsWith("bind:"))
             {
-                case 1: // UDP HELLO
-                    HandleHello(ep);
-                    break;
+                int id = int.Parse(msg.Replace("bind:", ""));
 
-                case 2: // MOVE
-                    HandleMove(ep, data);
-                    break;
-            }
-        }
-
-        static void HandleHello(IPEndPoint ep)
-        {
-            foreach (var c in TcpServer.Clients.Values)
-            {
-                if (c.UdpEndPoint == null)
+                if (TcpServer.Clients.TryGetValue(id, out var session))
                 {
-                    c.BindUdp(ep);
-                    break;
+                    session.BindUdp(ep);
                 }
-            }
-        }
 
-        static void HandleMove(IPEndPoint ep, byte[] data)
-        {
-            int dx = (sbyte)data[1];
-            int dy = (sbyte)data[2];
-            Console.WriteLine($"Move from {ep} : {dx},{dy}");
+                return;
+            }
         }
     }
 }

@@ -72,10 +72,24 @@ namespace Networking
 
             Console.WriteLine($"TCP client connected: {id}");
 
-            // ⭐ GẮN PLAYER THẬT
-            gameServer.OnClientConnected(session);
+            // ⭐ tạo player thật
+            var player = gameServer.OnClientConnected(session);
+
+            // ⭐ gửi welcome chuẩn JSON
+            session.Send(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                type = "welcome",
+                playerId = player.Id
+            }) + "\n");
 
             listener.BeginAcceptTcpClient(OnAccept, null);
         }
+
+        public ClientSession? GetSession(int id)
+        {
+            Clients.TryGetValue(id, out var session);
+            return session;
+        }
+
     }
 }

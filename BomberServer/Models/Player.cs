@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 
 namespace BomberServer.Models
 {
@@ -17,6 +18,9 @@ namespace BomberServer.Models
     {
         public int Id { get; }
         public string nickName { get; set; } = "";
+            
+        public int RoomId { get; set; }
+        public int TeamId { get; set; } = 0; // 0 = solo
 
         //toa do
         public int X { get; private set; }
@@ -32,6 +36,7 @@ namespace BomberServer.Models
 
         //input state
         public PlayerInput LastInput { get; private set; } = PlayerInput.None;
+        public IPEndPoint RemoteEndPoint;
 
         public Player(int id, int x, int y, string nickname = "")
         {
@@ -56,7 +61,8 @@ namespace BomberServer.Models
         }
         public void UpdateMove(GameMap gameMap, Func<int, int, bool> isBombAt)
         {
-            if(!IsAlive)
+            Console.WriteLine($"MOVE {Id} input={LastInput}");
+            if (!IsAlive)
                 return;
             int dx = 0;
             int dy = 0;
@@ -87,6 +93,5 @@ namespace BomberServer.Models
         {
             LastInput = input;
         }
-
     }
 }
