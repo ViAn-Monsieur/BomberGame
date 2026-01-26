@@ -67,77 +67,92 @@ namespace BomberServer.Core
         {
             if (session.Player != null)
             {
+                session.Player.RemoteEndPoint = null;
                 RoomManager.LeaveRoom(session.Player);
             }
         }
 
         public void OnUdpPacket(IPEndPoint ep, byte[] data)
         {
-            string msg = Encoding.UTF8.GetString(data);
-
-            using var doc = JsonDocument.Parse(msg);
-            var root = doc.RootElement;
-
-            string type = root.GetProperty("type").GetString()!;
-
-            if (type == "udp_bind")
+            try
             {
-                int playerId = root.GetProperty("playerId").GetInt32();
+                string msg = Encoding.UTF8.GetString(data);
 
-                if (!TcpServer.Clients.TryGetValue(playerId, out var session))
-                    return;
+                using var doc = JsonDocument.Parse(msg);
+                var root = doc.RootElement;
 
-                session.BindUdp(ep);
-                session.Player.RemoteEndPoint = ep;
+                string type = root.GetProperty("type").GetString()!;
+
+                if (type == "udp_bind")
+                {
+                    int playerId = root.GetProperty("playerId").GetInt32();
+
+                    if (!TcpServer.Clients.TryGetValue(playerId, out var session))
+                        return;
+
+                    session.BindUdp(ep);
+                    session.Player.RemoteEndPoint = ep;
+                }
+                else if (type == "input")
+                {
+                    int id = root.GetProperty("playerId").GetInt32();
+                    int input = root.GetProperty("input").GetInt32();
+
+                    if (!TcpServer.Clients.TryGetValue(id, out var session))
+                        return;
+
+                    session.Player?.SetInput((PlayerInput)input);
+                }
             }
-            else if (type == "input")
+            catch (Exception ex)
             {
-                int id = root.GetProperty("playerId").GetInt32();
-                int input = root.GetProperty("input").GetInt32();
-
-                if (!TcpServer.Clients.TryGetValue(id, out var session))
-                    return;
-
-                session.Player?.SetInput((PlayerInput)input);
+                Console.WriteLine("UDP PACKET ERROR:");
+                Console.WriteLine(ex);
             }
         }
 
         private GameMap LoadRandomMap()
-{
-    string mapDir = Path.Combine(AppContext.BaseDirectory, "Maps");
+        {
+            string mapDir = Path.Combine(AppContext.BaseDirectory, "Maps");
 
-    Console.WriteLine("MapDir = " + mapDir);
+            Console.WriteLine("MapDir = " + mapDir);
 
-    if (!Directory.Exists(mapDir))
-        throw new Exception($"Maps folder missing: {mapDir}");
+            if (!Directory.Exists(mapDir))
+                throw new Exception($"Maps folder missing: {mapDir}");
 
-    var files = Directory.GetFiles(mapDir, "*.json");
+            var files = Directory.GetFiles(mapDir, "*.json");
 
-    if (files.Length == 0)
-        throw new Exception("No map files");
+            if (files.Length == 0)
+                throw new Exception("No map files");
 
-    // chỉ lấy file JSON thực sự bắt đầu bằng '{'
-    var valid = files
-        .Where(f => File.ReadAllText(f).TrimStart().StartsWith("{"))
-        .ToArray();
+            // chỉ lấy file JSON thực sự bắt đầu bằng '{'
+            var valid = files
+                .Where(f => File.ReadAllText(f).TrimStart().StartsWith("{"))
+                .ToArray();
 
-    if (valid.Length == 0)
-        throw new Exception("No valid map json");
+            if (valid.Length == 0)
+                throw new Exception("No valid map json");
 
-    var chosen = valid[Random.Shared.Next(valid.Length)];
+            var chosen = valid[Random.Shared.Next(valid.Length)];
 
-    return GameMapLoader.LoadFromJson(chosen);
-}
-
-
+            return GameMapLoader.LoadFromJson(chosen);
+        }
 
         public void SendSnapshot(Room room, GameState state)
         {
+            if (room.Players.Count == 0)
+                return;
+
             var bytes = JsonSerializer.SerializeToUtf8Bytes(state);
 
             var eps = room.Players.Values
-                           .Where(p => p.RemoteEndPoint != null)
-                            .Select(p => p.RemoteEndPoint);
+                .Where(p => p.RemoteEndPoint != null)
+                .Select(p => p.RemoteEndPoint)
+                .ToList();
+
+            if (eps.Count == 0)
+                return;
+
             udp.SendToMany(eps, bytes);
         }
     }

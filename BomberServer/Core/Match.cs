@@ -15,6 +15,7 @@ namespace BomberServer.Core
 
         public List<Bomb> Bombs { get; } = new();
         public List<Explosion> Explosions { get; } = new();
+
         private readonly List<(int x, int y)> destroyedBricks = new();
 
         public Match(int matchId, GameMap map)
@@ -39,7 +40,7 @@ namespace BomberServer.Core
             foreach (var p in Players.Values)
             {
                 Console.WriteLine($"CALL UPDATE MOVE {p.Id}");
-                p.UpdateMove(Map, IsBombAt);
+                p.UpdateMove(Map, (x, y) => IsBombAt(x, y, p.Id));
             }
 
             foreach (var p in Players.Values)
@@ -83,7 +84,9 @@ namespace BomberServer.Core
 
             Explosions.Add(explosion);
 
-            destroyedBricks.AddRange(bricks);
+            foreach (var b in bricks)
+                if (!destroyedBricks.Contains(b))
+                    destroyedBricks.Add(b);
 
             foreach (var p in Players.Values.Where(p => p.IsAlive))
                 if (explosion.Cells.Any(c => c.X == p.X && c.Y == p.Y))
@@ -91,8 +94,15 @@ namespace BomberServer.Core
         }
 
 
-        private bool IsBombAt(int x, int y)
-            => Bombs.Any(b => !b.IsExploded && b.X == x && b.Y == y);
+        private bool IsBombAt(int x, int y, int playerId = -1)
+        {
+            return Bombs.Any(b =>
+                !b.IsExploded &&
+                b.X == x &&
+                b.Y == y &&
+                b.OwnerId != playerId
+            );
+        }
 
         private void TryPlaceBomb(Player player)
         {
@@ -102,7 +112,7 @@ namespace BomberServer.Core
 
             Bombs.Add(new Bomb(player.Id, player.X, player.Y, 2, 2f));
             player.CurrentBombsPlaced++;
-            // player.ClearPlaceBombFlag();
+            player.ClearPlaceBombFlag();
         }
 
         // === THUẦN TRẠNG THÁI ===
@@ -153,6 +163,16 @@ namespace BomberServer.Core
                     });
                 }
             }
+
+            foreach (var b in destroyedBricks)
+            {
+                state.Bricks.Add(new BrickDestroyedState
+                {
+                    X = b.x,
+                    Y = b.y
+                });
+            }
+            destroyedBricks.Clear();
 
             return state;
         }

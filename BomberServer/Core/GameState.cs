@@ -12,6 +12,7 @@ namespace BomberServer.Core
         public List<PlayerState> Players { get; set; } = new();
         public List<BombState> Bombs { get; set; } = new();
         public List<ExplosionCellState> Explosions { get; set; } = new();
+        public List<BrickDestroyedState> Bricks { get; set; } = new();
 
     }
 
@@ -41,4 +42,10 @@ namespace BomberServer.Core
         public int X { get; set; }
         public int Y { get; set; }
     }
+    public class BrickDestroyedState
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+    }
+
 }

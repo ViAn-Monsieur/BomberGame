@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 
 namespace BomberServer.Core
@@ -7,8 +8,8 @@ namespace BomberServer.Core
     public class GameLoop
     {
         private readonly RoomManager _roomManager;
-        private bool _running;
         private readonly GameServer _gameServer;
+        private bool _running;
         private int _tick;
 
         public int TickRate { get; }
@@ -23,6 +24,8 @@ namespace BomberServer.Core
 
         public void Start()
         {
+            Console.WriteLine("GameLoop started");
+
             _running = true;
 
             var sw = Stopwatch.StartNew();
@@ -31,33 +34,56 @@ namespace BomberServer.Core
 
             while (_running)
             {
-                long now = sw.ElapsedMilliseconds;
-                if (now - last >= tickIntervalMs)
+                try
                 {
-                    last = now;
-                    Update(DeltaTime);
+                    long now = sw.ElapsedMilliseconds;
+
+                    if (now - last >= tickIntervalMs)
+                    {
+                        last = now;
+                        Update(DeltaTime);
+                    }
+                    else
+                    {
+                        Thread.Sleep(1);
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Thread.Sleep(1);
+                    Console.WriteLine("========= GAME LOOP CRASH =========");
+                    Console.WriteLine(ex);
+                    Console.WriteLine("=================================");
                 }
             }
         }
+
         private void Update(float dt)
         {
             _tick++;
 
-            foreach (var room in _roomManager.AllRooms)
+            foreach (var room in _roomManager.AllRooms.ToList())
             {
-                room.Update(dt);
+                try
+                {
+                    room.Update(dt);
 
-                var snapshot =
-                    room.matchLogic.BuildSnapshot(_tick, room.RoomId);
+                    if (room.State == RoomState.Finished)
+                    {
+                        _roomManager.RemoveRoom(room.RoomId);
+                        continue;
+                    }
 
-                _gameServer.SendSnapshot(room, snapshot);
+                    var snapshot = room.matchLogic.BuildSnapshot(_tick, room.RoomId);
+
+                    _gameServer.SendSnapshot(room, snapshot);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Room {room.RoomId} update crash:");
+                    Console.WriteLine(ex);
+                }
             }
         }
-
 
         public void Stop() => _running = false;
     }

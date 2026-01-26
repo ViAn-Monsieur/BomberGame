@@ -100,6 +100,5 @@ namespace BomberServer.Core
 
         private int GetMaxPlayers()
             => Type == RoomType.Solo2 ? 2 : 4;
-
     }
 }
