@@ -36,33 +36,16 @@ namespace BomberServer.Core
         }
 
 
-        public Player OnClientConnected(ClientSession session)
+        public void OnClientConnected(ClientSession session)
         {
             Console.WriteLine($"Client {session.Id} connected");
 
-            // var map = LoadRandomMap();
-            // var room = RoomManager.JoinRandomRoom(RoomType.Solo2, map);
-
-            var room = RoomManager.JoinRandomRoom(RoomType.Solo2, LoadRandomMap);
-
-            var spawn = room.GetRandomSpawn();
-            var player = new Player(session.Id, spawn.x, spawn.y, $"P{session.Id}");
-
-            session.Player = player;
-            session.Player.RoomId = room.RoomId;
-
-            RoomManager.AddPlayerToRoom(room, player);
-            var mapPacket = new
+            session.Send(JsonSerializer.Serialize(new
             {
-                type = "map",
-                map = room.Map
-            };
+                type = "menu"
+            }));
 
-            string json = JsonSerializer.Serialize(mapPacket);
-
-            session.Send(json);
-            Console.WriteLine("[Server] Map sent");
-            return player;
+            Console.WriteLine("[Server] Menu sent");
         }
         //public Player CreatePlayer(ClientSession session)
         //{
@@ -103,7 +86,9 @@ namespace BomberServer.Core
                         return;
 
                     session.BindUdp(ep);
-                    session.Player.RemoteEndPoint = ep;
+                    if (session.Player != null)
+                        session.Player.RemoteEndPoint = ep;
+
                 }
                 else if (type == "input")
                 {
@@ -166,6 +151,32 @@ namespace BomberServer.Core
                 return;
 
             udp.SendToMany(eps, bytes);
+        }
+
+        internal void JoinRoom(ClientSession session, RoomType rt)
+        {
+            var room = RoomManager.JoinRandomRoom(rt, LoadRandomMap);
+            var spawn = room.GetRandomSpawn();
+            var player = new Player(session.Id, spawn.x, spawn.y, $"P{session.Id}");
+
+            session.Player = player;
+            player.RoomId = room.RoomId;
+
+            room.AddPlayer(player);
+            var mapPacket = new
+            {
+                type = "map",
+                map = room.Map
+            };
+
+            string json = JsonSerializer.Serialize(mapPacket);
+            session.Send(new
+            {
+                type = "welcome",
+                playerId = player.Id,
+            });
+            session.Send(json);
+            Console.WriteLine("[Server] Map sent");
         }
     }
 }

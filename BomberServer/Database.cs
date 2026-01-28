@@ -66,5 +66,31 @@ namespace BomberServer
             cmd.ExecuteNonQuery();
             return true;
         }
+        public static void AddWin(int userId)
+        {
+            using var db = Open();
+            var cmd = db.CreateCommand();
+            cmd.CommandText = @"UPDATE users
+                                SET wins = wins + 1
+                                WHERE id = @id";
+            cmd.Parameters.AddWithValue("@id", userId);
+            cmd.ExecuteNonQuery();
+        }
+        public static List<(string nick, int wins)> GetTop10()
+        {
+            var list = new List<(string, int)> ();
+            using var db = Open();
+            var cmd = db.CreateCommand();
+            cmd.CommandText = @"SELECT nickname, wins
+                                FROM users
+                                ORDER BY wins DESC
+                                LIMIT 10";
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                list.Add((r.GetString(0), r.GetInt32(1)));
+            }
+            return list;
+        }
     }
 }

@@ -1,8 +1,10 @@
+using BomberServer.Models;
+using Networking;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
-using BomberServer.Models;
 
 namespace BomberServer.Core
 {
@@ -33,27 +35,23 @@ namespace BomberServer.Core
 
         public (int x, int y) GetRandomSpawn()
         {
-            bool flag = false;
             var spawns = Map.FindSpawnPoint();
 
             if (spawns.Count == 0)
                 throw new Exception("No spawn points!");
-            while (!flag)
+
+            while (true)
             {
-                var spawn = spawns[new Random().Next(0, spawns.Count)];
-                flag = true;
-                foreach (var p in Players.Values)
-                {
-                    if (p.X == spawn.x && p.Y == spawn.y)
-                    {
-                        flag = false;
-                        break;
-                    }
-                }
-                if (flag)
+                var spawn = spawns[Random.Shared.Next(spawns.Count)];
+
+                if (!Map.IsWalkable(spawn.x, spawn.y))
+                    continue;
+
+                bool occupied = Players.Values.Any(p => p.X == spawn.x && p.Y == spawn.y);
+
+                if (!occupied)
                     return spawn;
             }
-            return spawns[0];
         }
 
         public void AddPlayer(Player p)
@@ -95,25 +93,110 @@ namespace BomberServer.Core
 
         public void CheckWinCondition()
         {
-            if (Type == RoomType.Solo2 || Type == RoomType.Solo4)
-            {
-                if (matchLogic.AlivePlayerCount() == 1)
-                    EndGame();
-            }
-            else if (Type == RoomType.Team2v2)
+            if (Type == RoomType.Team2v2)
             {
                 if (matchLogic.AliveTeams().Count() == 1)
+                    EndGameTeam();
+            }
+            else
+            {
+                if (matchLogic.AlivePlayerCount() <= 1)
                     EndGame();
             }
         }
+
 
         private void EndGame()
         {
             State = RoomState.Finished;
-            Console.WriteLine($"[Room #{RoomId}] GAME END");
+
+            int winner = GetWinner();
+            if (winner != -1)
+            {
+                var winnerPlayer = Players[winner];
+                if(TcpServer.Clients.TryGetValue(winnerPlayer.Id, out var session))
+                {
+                    Database.AddWin(session.User!.Id);
+                    session.User.Wins++;
+                }
+            }
+            var packet = new
+            {
+                type = "game_end",
+                winner = winner
+            };
+
+            string json = JsonSerializer.Serialize(packet);
+
+            foreach (var p in Players.Values)
+            {
+                if (TcpServer.Clients.TryGetValue(p.Id, out var session))
+                {
+                    session.Send(json);
+
+                }
+            }
+            foreach (var p in Players.Values)
+            {
+                if (TcpServer.Clients.TryGetValue(p.Id, out var s))
+                {
+                    s.Player = null;
+                }
+            }
+
+            Players.Clear();
+            matchLogic.Players.Clear();
+
+            Console.WriteLine($"[Room #{RoomId}] GAME END - Winner {winner}");
         }
+        private void EndGameTeam()
+        {
+            State = RoomState.Finished;
+
+            int team = GetWinnerTeam();
+
+            var packet = new
+            {
+                type = "game_end",
+                team = team
+            };
+
+            string json = JsonSerializer.Serialize(packet);
+
+            foreach (var p in Players.Values)
+                if (TcpServer.Clients.TryGetValue(p.Id, out var session))
+                    session.Send(json);
+            foreach (var p in Players.Values)
+            {
+                if (TcpServer.Clients.TryGetValue(p.Id, out var s))
+                {
+                    s.Player = null; 
+                }
+            }
+            Players.Clear();
+            matchLogic.Players.Clear();
+
+            Console.WriteLine($"[Room #{RoomId}] GAME END - Team {team}");
+        }
+
 
         private int GetMaxPlayers()
             => Type == RoomType.Solo2 ? 2 : 4;
+        private int GetWinner()
+        {
+            var alive = Players.Values.Where(p => p.IsAlive).ToList();
+
+            if (alive.Count == 0)
+                return -1; // draw
+
+            return alive[0].Id;
+        }
+
+
+        private int GetWinnerTeam()
+        {
+            return matchLogic.AliveTeams().First();
+        }
+
     }
 }

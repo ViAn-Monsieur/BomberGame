@@ -36,7 +36,7 @@ namespace BomberServer.Core
                     room.State == RoomState.Waiting &&
                     !room.IsFull)
                 {
-                    return room; // ✅ dùng map của room
+                    return room; // dùng map của room
                 }
             }
 
@@ -44,6 +44,7 @@ namespace BomberServer.Core
             var map = mapFactory();
             return CreateRoom(type, map);
         }
+
         // =========================
         // Tham gia phong bằng ID
         // =========================

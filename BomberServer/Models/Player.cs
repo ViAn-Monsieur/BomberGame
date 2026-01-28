@@ -32,9 +32,10 @@ namespace BomberServer.Models
 
         //thong tin ve bomb
         public int BombPower { get; set; } = 1;
-        public int MaxBombs { get; set; } = 1;
+        public int MaxBombs { get; set; } = 2;
         public int CurrentBombsPlaced { get; set; } = 0;
         bool placeBombRequested { get; set; }
+        public bool CanPassBomb { get; set; } = true;
 
         //input state
         public PlayerInput LastInput { get; private set; } = PlayerInput.None;
@@ -84,11 +85,20 @@ namespace BomberServer.Models
             int newX = X + dx;
             int newY = Y + dy;
 
-            if (!gameMap.IsWalkable(newX, newY) || isBombAt(newX, newY))
+            // block wall / brick
+            if (!gameMap.IsWalkable(newX, newY))
+                return;
+
+            // block bomb (sau khi rời bomb)
+            if (isBombAt(newX, newY) && !CanPassBomb)
                 return;
 
             X = newX;
             Y = newY;
+
+            // nếu đã rời bomb thì khóa lại
+            if (CanPassBomb && !isBombAt(X, Y))
+                CanPassBomb = false;
         }
         //muon dat bomb
         public bool WantsPlaceBomb()

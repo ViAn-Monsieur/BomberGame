@@ -42,7 +42,7 @@ namespace BomberServer.Core
 
             foreach (var p in Players.Values)
             {
-                p.UpdateMove(Map, (x, y) => IsBombAt(x, y, p.Id));
+                p.UpdateMove(Map, IsBombAt);
             }
 
             foreach (var p in Players.Values)
@@ -53,6 +53,7 @@ namespace BomberServer.Core
                     p.ClearPlaceBombFlag();
                 }
             } 
+
         }
 
         private void UpdateBombs(float dt)
@@ -105,18 +106,25 @@ namespace BomberServer.Core
                     p.Kill();
                     p.ClearPlaceBombFlag(); // chống bomb chết vẫn đặt
                 }
+            foreach (var b in Bombs.Where(b =>
+                !b.IsExploded &&
+                explosion.Cells.Any(c => c.X == b.X && c.Y == b.Y)))
+            {
+                b.ForceExplode();
+            }
+
         }
 
 
-        private bool IsBombAt(int x, int y, int playerId = -1)
+        private bool IsBombAt(int x, int y)
         {
             return Bombs.Any(b =>
                 !b.IsExploded &&
                 b.X == x &&
-                b.Y == y &&
-                b.OwnerId != playerId
+                b.Y == y
             );
         }
+
 
         private void TryPlaceBomb(Player player)
         {
@@ -124,7 +132,7 @@ namespace BomberServer.Core
             if (player.CurrentBombsPlaced >= player.MaxBombs) return;
             if (!Map.CanPlaceBomb(player.X, player.Y)) return;
             if (IsBombAt(player.X, player.Y)) return;
-
+            player.CanPassBomb = true;
             Bombs.Add(new Bomb(player.Id, player.X, player.Y, player.BombPower, 2f));
             player.CurrentBombsPlaced++;
             player.ClearPlaceBombFlag();
