@@ -66,16 +66,18 @@ namespace BomberServer.Core
                 try
                 {
                     room.Update(dt);
-
+                    var snapshot = room.matchLogic.BuildSnapshot(_tick, room.RoomId);
+                    //log brick states for debugging
+                    if (snapshot != null) {
+                        foreach (var brick in snapshot.Bricks) {
+                            Console.WriteLine($"Room {room.RoomId} Tick {_tick}: Brick at ({brick.X}, {brick.Y}) destroyed.");
+                        }
+                    }
+                    _gameServer.SendSnapshot(room, snapshot);
                     if (room.State == RoomState.Finished)
                     {
                         _roomManager.RemoveRoom(room.RoomId);
-                        continue;
                     }
-
-                    var snapshot = room.matchLogic.BuildSnapshot(_tick, room.RoomId);
-
-                    _gameServer.SendSnapshot(room, snapshot);
                 }
                 catch (Exception ex)
                 {

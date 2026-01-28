@@ -33,12 +33,27 @@ namespace BomberServer.Core
 
         public (int x, int y) GetRandomSpawn()
         {
+            bool flag = false;
             var spawns = Map.FindSpawnPoint();
 
             if (spawns.Count == 0)
                 throw new Exception("No spawn points!");
-
-            return spawns[Random.Shared.Next(spawns.Count)];
+            while (!flag)
+            {
+                var spawn = spawns[new Random().Next(0, spawns.Count)];
+                flag = true;
+                foreach (var p in Players.Values)
+                {
+                    if (p.X == spawn.x && p.Y == spawn.y)
+                    {
+                        flag = false;
+                        break;
+                    }
+                }
+                if (flag)
+                    return spawn;
+            }
+            return spawns[0];
         }
 
         public void AddPlayer(Player p)

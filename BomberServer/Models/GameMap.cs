@@ -32,6 +32,7 @@ namespace BomberServer.Models
                 Tiles[y] = new TileType[width];
             }
         }
+
         //ben trong map
         public bool IsInside(int x, int y)
         {
@@ -92,5 +93,16 @@ namespace BomberServer.Models
             }
             return spawnPoints;
         }
+        public GameMap Clone()
+        {
+            var clone = new GameMap(Width, Height);
+
+            for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                    clone.SetTile(x, y, GetTile(x, y));
+
+            return clone;
+        }
+
     }
 }

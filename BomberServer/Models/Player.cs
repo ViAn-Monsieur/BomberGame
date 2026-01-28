@@ -15,8 +15,10 @@ namespace BomberServer.Models
     }
     public class Player
     {
-        public int Id { get; }
-        public string nickName { get; set; } = "";
+        public int Id { get; set; }
+        public int UserId { get; set; }
+
+        public string NickName { get; set; } = "";
             
         public int RoomId { get; set; }
         public int TeamId { get; set; } = 0; // 0 = solo
@@ -29,7 +31,7 @@ namespace BomberServer.Models
         public bool IsAlive { get; set; } = true;
 
         //thong tin ve bomb
-        public int BombPower { get; set; } = 2;
+        public int BombPower { get; set; } = 1;
         public int MaxBombs { get; set; } = 1;
         public int CurrentBombsPlaced { get; set; } = 0;
         bool placeBombRequested { get; set; }
@@ -43,8 +45,13 @@ namespace BomberServer.Models
             Id = id;
             X = x;
             Y = y;
-            nickName = nickname;
+            NickName = nickname;
         }
+
+        public Player()
+        {
+        }
+
         public void Respawn(int x, int y)
         {
             X = x;
@@ -61,7 +68,6 @@ namespace BomberServer.Models
         }
         public void UpdateMove(GameMap gameMap, Func<int, int, bool> isBombAt)
         {
-            Console.WriteLine($"MOVE {Id} input={LastInput}");
             if (!IsAlive)
                 return;
             int dx = 0;

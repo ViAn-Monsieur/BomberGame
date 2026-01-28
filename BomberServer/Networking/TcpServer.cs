@@ -67,23 +67,14 @@ namespace Networking
             TcpClient client = listener.EndAcceptTcpClient(ar);
             int id = nextId++;
 
-            var session = new ClientSession(id, client);
+            var session = new ClientSession(id, client, gameServer);
             Clients[id] = session;
 
             Console.WriteLine($"TCP client connected: {id}");
 
-            // ⭐ tạo player thật
-            var player = gameServer.OnClientConnected(session);
-
-            // ⭐ gửi welcome chuẩn JSON
-            session.Send(System.Text.Json.JsonSerializer.Serialize(new
-            {
-                type = "welcome",
-                playerId = player.Id
-            }) + "\n");
-
             listener.BeginAcceptTcpClient(OnAccept, null);
         }
+
 
         public ClientSession? GetSession(int id)
         {

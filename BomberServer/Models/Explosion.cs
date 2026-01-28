@@ -58,10 +58,17 @@ namespace BomberServer.Models
                     if (tile == TileType.Brick)
                     {
                         bricksDestroyed.Add((nx, ny));
-                        gameMap.DestroyBrick(nx, ny);
                         break;
                     }
                 }
+            }
+            foreach (var (x, y) in cells)
+            {
+                Console.WriteLine($"Explosion cell: ({x}, {y})");
+            }
+            foreach (var (x, y) in bricksDestroyed)
+            {
+                Console.WriteLine($"Brick destroyed at: ({x}, {y})");
             }
             return new Explosion(cells.ToList());
         }

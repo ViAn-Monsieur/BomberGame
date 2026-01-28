@@ -36,32 +36,45 @@ namespace BomberServer.Core
 
         public void Update(float deltaTime)
         {
-            Console.WriteLine("MATCH UPDATE");
+
+            UpdateBombs(deltaTime);
+            UpdateExplosions(deltaTime);
+
             foreach (var p in Players.Values)
             {
-                Console.WriteLine($"CALL UPDATE MOVE {p.Id}");
                 p.UpdateMove(Map, (x, y) => IsBombAt(x, y, p.Id));
             }
 
             foreach (var p in Players.Values)
             {
                 if (p.IsAlive && p.WantsPlaceBomb())
+                {
                     TryPlaceBomb(p);
-            }
-
-            UpdateBombs(deltaTime);
-            UpdateExplosions(deltaTime);
+                    p.ClearPlaceBombFlag();
+                }
+            } 
         }
 
         private void UpdateBombs(float dt)
         {
+            var mapSnapshot = Map.Clone();               // CLONE 1 LẦN
+
+            var pendingBricks = new List<(int, int)>();  // gom brick
+
             for (int i = Bombs.Count - 1; i >= 0; i--)
             {
-                if (Bombs[i].Update(dt))
+                if (!Bombs[i].IsExploded && Bombs[i].Update(dt))
                 {
-                    Explode(Bombs[i]);
+                    Explode(Bombs[i], mapSnapshot, pendingBricks);
                     Bombs.RemoveAt(i);
                 }
+            }
+
+            // APPLY SAU CÙNG
+            foreach (var b in pendingBricks.Distinct())
+            {
+                Map.DestroyBrick(b.Item1, b.Item2);
+                destroyedBricks.Add((b.Item1, b.Item2));
             }
         }
 
@@ -75,22 +88,23 @@ namespace BomberServer.Core
             }
         }
 
-        private void Explode(Bomb bomb)
+        private void Explode(Bomb bomb, GameMap snapshot, List<(int, int)> pendingBricks)
         {
             if (Players.TryGetValue(bomb.OwnerId, out var owner))
                 owner.CurrentBombsPlaced--;
 
-            var explosion = Explosion.Create(Map, bomb.X, bomb.Y, bomb.Power, out var bricks);
+            var explosion = Explosion.Create(snapshot, bomb.X, bomb.Y, bomb.Power, out var bricks);
+
+            pendingBricks.AddRange(bricks);
 
             Explosions.Add(explosion);
 
-            foreach (var b in bricks)
-                if (!destroyedBricks.Contains(b))
-                    destroyedBricks.Add(b);
-
             foreach (var p in Players.Values.Where(p => p.IsAlive))
                 if (explosion.Cells.Any(c => c.X == p.X && c.Y == p.Y))
+                {
                     p.Kill();
+                    p.ClearPlaceBombFlag(); // chống bomb chết vẫn đặt
+                }
         }
 
 
@@ -106,11 +120,12 @@ namespace BomberServer.Core
 
         private void TryPlaceBomb(Player player)
         {
+            Console.WriteLine($"Bomb placed by {player.Id} at {player.X},{player.Y}");
             if (player.CurrentBombsPlaced >= player.MaxBombs) return;
             if (!Map.CanPlaceBomb(player.X, player.Y)) return;
             if (IsBombAt(player.X, player.Y)) return;
 
-            Bombs.Add(new Bomb(player.Id, player.X, player.Y, 2, 2f));
+            Bombs.Add(new Bomb(player.Id, player.X, player.Y, player.BombPower, 2f));
             player.CurrentBombsPlaced++;
             player.ClearPlaceBombFlag();
         }
@@ -133,7 +148,7 @@ namespace BomberServer.Core
                 state.Players.Add(new PlayerState
                 {
                     Id = p.Id,
-                    NickName = p.nickName,
+                    NickName = p.NickName,
                     X = p.X,
                     Y = p.Y,
                     Alive = p.IsAlive
@@ -163,6 +178,7 @@ namespace BomberServer.Core
                     });
                 }
             }
+            Explosions.Clear();
 
             foreach (var b in destroyedBricks)
             {

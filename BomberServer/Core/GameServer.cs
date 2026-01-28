@@ -19,7 +19,8 @@ namespace BomberServer.Core
         public void Start()
         {
             Console.WriteLine("[GameServer] Starting...");
-
+            Database.Init();
+            Console.WriteLine("[GameServer] Database initialized.");
             tcp = new TcpServer(7777, this);
             udp = new UdpServer(8888, this);
 
@@ -60,8 +61,19 @@ namespace BomberServer.Core
             string json = JsonSerializer.Serialize(mapPacket);
 
             session.Send(json);
+            Console.WriteLine("[Server] Map sent");
             return player;
         }
+        //public Player CreatePlayer(ClientSession session)
+        //{
+        //    var p = new Player();
+        //    p.Id = session.Id;
+        //    p.UserId = session.User!.Id;
+        //    p.NickName = session.User.NickName;
+
+        //    session.Player = p;
+        //    return p;
+        //}
 
         public void OnClientDisconnected(ClientSession session)
         {

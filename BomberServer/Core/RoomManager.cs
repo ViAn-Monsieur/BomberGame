@@ -44,7 +44,21 @@ namespace BomberServer.Core
             var map = mapFactory();
             return CreateRoom(type, map);
         }
-
+        // =========================
+        // Tham gia phong bằng ID
+        // =========================
+        public Room? JoinRoomById(int roomId)
+        {
+            if (_rooms.TryGetValue(roomId, out var room))
+            {
+                if (room.State != RoomState.Waiting)
+                    throw new Exception("Room already started");
+                if (room.IsFull)
+                    throw new Exception("Room is full");
+                return room;
+            }
+            return null;
+        }
 
         public Room? GetRoom(int roomId)
             => _rooms.TryGetValue(roomId, out var r) ? r : null;
