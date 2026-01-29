@@ -19,14 +19,20 @@ namespace BomberServer.Models
         public int Height { get; private set; }
 
         //tile[y,x]
-        public TileType[,] Tiles { get; private set; } = default!;
+        public TileType[][] Tiles { get; set; } = default!;
 
         public GameMap(int width, int height)
         {
             Width = width;
             Height = height;
-            Tiles = new TileType[height, width];
+            Tiles = new TileType[height][];
+
+            for (int y = 0; y < height; y++)
+            {
+                Tiles[y] = new TileType[width];
+            }
         }
+
         //ben trong map
         public bool IsInside(int x, int y)
         {
@@ -36,12 +42,12 @@ namespace BomberServer.Models
         public TileType GetTile(int x, int y)
         {
             if (!IsInside(x, y)) return TileType.Wall;
-            return Tiles[y, x];
+            return Tiles[y][x];
         }
         public void SetTile(int x, int y, TileType type)
         {
             if (!IsInside(x, y)) return;
-            Tiles[y, x] = type;
+            Tiles[y][x] = type;
         }
         //co the di
         public bool IsWalkable(int x, int y)
@@ -67,6 +73,7 @@ namespace BomberServer.Models
             if (GetTile(x, y) == TileType.Brick)
             {
                 SetTile(x, y, TileType.Empty);
+                Console.WriteLine($"Brick at ({x}, {y}) destroyed.");
                 return true;
             }
             return false;
@@ -86,5 +93,16 @@ namespace BomberServer.Models
             }
             return spawnPoints;
         }
+        public GameMap Clone()
+        {
+            var clone = new GameMap(Width, Height);
+
+            for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                    clone.SetTile(x, y, GetTile(x, y));
+
+            return clone;
+        }
+
     }
 }

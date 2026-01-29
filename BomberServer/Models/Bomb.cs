@@ -9,7 +9,7 @@ namespace BomberServer.Models
         public int X { get; }
         public int Y { get; }
         public int Power { get; }
-        public float FuseTime { get; }
+        public float FuseTime { get; private set; }
         public float ElapsedTime { get; private set; } = 0f;
         public bool IsExploded { get; private set; } = false;
 
@@ -39,5 +39,14 @@ namespace BomberServer.Models
         {
             return Math.Max(0f, FuseTime - ElapsedTime);
         }
+        public void MarkExploded()
+        {
+            IsExploded = true;
+        }
+        public void ForceExplode()
+        {
+            FuseTime = 0;
+        }
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 
 namespace BomberServer.Models
 {
@@ -12,11 +13,15 @@ namespace BomberServer.Models
         Right = 1 << 3,
         PlaceBomb = 1 << 4
     }
-
     public class Player
     {
-        public int Id { get; }
-        public string nickName { get; set; } = "";
+        public int Id { get; set; }
+        public int UserId { get; set; }
+
+        public string NickName { get; set; } = "";
+            
+        public int RoomId { get; set; }
+        public int TeamId { get; set; } = 0; // 0 = solo
 
         //toa do
         public int X { get; private set; }
@@ -26,20 +31,28 @@ namespace BomberServer.Models
         public bool IsAlive { get; set; } = true;
 
         //thong tin ve bomb
-        public int BombPower { get; set; } = 2;
-        public int MaxBombs { get; set; } = 1;
+        public int BombPower { get; set; } = 1;
+        public int MaxBombs { get; set; } = 2;
         public int CurrentBombsPlaced { get; set; } = 0;
+        bool placeBombRequested { get; set; }
+        public bool CanPassBomb { get; set; } = true;
 
         //input state
         public PlayerInput LastInput { get; private set; } = PlayerInput.None;
+        public IPEndPoint RemoteEndPoint;
 
         public Player(int id, int x, int y, string nickname = "")
         {
             Id = id;
             X = x;
             Y = y;
-            nickName = nickname;
+            NickName = nickname;
         }
+
+        public Player()
+        {
+        }
+
         public void Respawn(int x, int y)
         {
             X = x;
@@ -56,7 +69,7 @@ namespace BomberServer.Models
         }
         public void UpdateMove(GameMap gameMap, Func<int, int, bool> isBombAt)
         {
-            if(!IsAlive)
+            if (!IsAlive)
                 return;
             int dx = 0;
             int dy = 0;
@@ -72,21 +85,37 @@ namespace BomberServer.Models
             int newX = X + dx;
             int newY = Y + dy;
 
-            if (!gameMap.IsWalkable(newX, newY) || isBombAt(newX, newY))
+            // block wall / brick
+            if (!gameMap.IsWalkable(newX, newY))
+                return;
+
+            // block bomb (sau khi rời bomb)
+            if (isBombAt(newX, newY) && !CanPassBomb)
                 return;
 
             X = newX;
             Y = newY;
+
+            // nếu đã rời bomb thì khóa lại
+            if (CanPassBomb && !isBombAt(X, Y))
+                CanPassBomb = false;
         }
         //muon dat bomb
         public bool WantsPlaceBomb()
         {
-            return IsAlive && LastInput.HasFlag(PlayerInput.PlaceBomb) && CurrentBombsPlaced < MaxBombs;
+            return IsAlive && placeBombRequested;
         }
         public void SetInput(PlayerInput input)
         {
+            // edge trigger bomb
+            if ((input & PlayerInput.PlaceBomb) != 0)
+                placeBombRequested = true;
+
             LastInput = input;
         }
-
+        public void ClearPlaceBombFlag()
+        {
+            placeBombRequested = false;
+        }
     }
 }

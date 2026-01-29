@@ -1,27 +1,32 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 
 namespace BomberServer.Core
 {
     public class GameLoop
     {
-        private readonly MatchManager _matchManager;
-        private bool _running = false;
+        private readonly RoomManager _roomManager;
+        private readonly GameServer _gameServer;
+        private bool _running;
+        private int _tick;
 
         public int TickRate { get; }
         public float DeltaTime => 1f / TickRate;
 
-        public GameLoop(MatchManager matchManager, int tickRate = 30)
+        public GameLoop(RoomManager roomManager, GameServer server, int tickRate = 30)
         {
-            _matchManager = matchManager;
+            _roomManager = roomManager;
+            _gameServer = server;
             TickRate = tickRate;
         }
 
         public void Start()
         {
+            Console.WriteLine("GameLoop started");
+
             _running = true;
-            Console.WriteLine($"[GameLoop] Start TickRate={TickRate}");
 
             var sw = Stopwatch.StartNew();
             long last = sw.ElapsedMilliseconds;
@@ -29,25 +34,59 @@ namespace BomberServer.Core
 
             while (_running)
             {
-                long now = sw.ElapsedMilliseconds;
-                long elapsed = now - last;
+                try
+                {
+                    long now = sw.ElapsedMilliseconds;
 
-                if (elapsed >= tickIntervalMs)
-                {
-                    last = now;
-                    _matchManager.Update(DeltaTime);
+                    if (now - last >= tickIntervalMs)
+                    {
+                        last = now;
+                        Update(DeltaTime);
+                    }
+                    else
+                    {
+                        Thread.Sleep(1);
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    // ngủ 1 tí để giảm CPU
-                    Thread.Sleep(1);
+                    Console.WriteLine("========= GAME LOOP CRASH =========");
+                    Console.WriteLine(ex);
+                    Console.WriteLine("=================================");
                 }
             }
         }
 
-        public void Stop()
+        private void Update(float dt)
         {
-            _running = false;
+            _tick++;
+
+            foreach (var room in _roomManager.AllRooms.ToList())
+            {
+                try
+                {
+                    room.Update(dt);
+                    var snapshot = room.matchLogic.BuildSnapshot(_tick, room.RoomId);
+                    //log brick states for debugging
+                    if (snapshot != null) {
+                        foreach (var brick in snapshot.Bricks) {
+                            Console.WriteLine($"Room {room.RoomId} Tick {_tick}: Brick at ({brick.X}, {brick.Y}) destroyed.");
+                        }
+                    }
+                    _gameServer.SendSnapshot(room, snapshot);
+                    if (room.State == RoomState.Finished)
+                    {
+                        _roomManager.RemoveRoom(room.RoomId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Room {room.RoomId} update crash:");
+                    Console.WriteLine(ex);
+                }
+            }
         }
+
+        public void Stop() => _running = false;
     }
 }

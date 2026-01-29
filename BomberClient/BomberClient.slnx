@@ -1,0 +1,11 @@
+﻿<Solution>
+  <Project Path="Unity.AI.Navigation.Editor.csproj" />
+  <Project Path="Unity.AI.Navigation.Editor.ConversionSystem.csproj" />
+  <Project Path="Unity.AI.Navigation.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Unity.AI.Navigation.Editor.Tests.csproj" />
+  <Project Path="Unity.AI.Navigation.Updater.csproj" />
+  <Project Path="Unity.AI.Navigation.Tests.csproj" />
+  <Project Path="Unity.AI.Navigation.LegacyOffMeshLink.Tests.csproj" />
+  <Project Path="Unity.AI.Navigation.Tests.EditorInPlaymode.csproj" />
+</Solution>
